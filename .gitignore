@@ -4,3 +4,8 @@ engine/assets/*
 engine/renders/*
 projects/*.json
 !.gitkeep
+
+# OAuth provider state (client registrations, codes and token hashes)
+oauth.sqlite3
+oauth.sqlite3-shm
+oauth.sqlite3-wal
