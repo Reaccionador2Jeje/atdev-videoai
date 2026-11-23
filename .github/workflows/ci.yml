@@ -18,7 +18,7 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Check Python syntax
-        run: python -m py_compile engine/server.py mcp_server.py mcp_http_server.py
+        run: python -m py_compile engine/server.py mcp_server.py mcp_http_server.py oauth_provider.py
       - name: Check browser JavaScript
         run: node --check editor.js && node --check app.js
       - name: Run renderer integration test
