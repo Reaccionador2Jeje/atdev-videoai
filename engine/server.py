@@ -56,7 +56,7 @@ class API(BaseHTTPRequestHandler):
         if path=='/api/health': self.reply(200,{'ok':True,'ffmpeg':bool(shutil.which('ffmpeg'))}); return
         if path.startswith('/renders/'):
             name=Path(path).name
-            if not re.fullmatch(r'video-[a-f0-9]+\\.mp4',name): self.send_error(404); return
+            if not re.fullmatch(r'video-[a-f0-9]+\.mp4',name): self.send_error(404); return
             f=OUT/name
             if not f.is_file(): self.send_error(404); return
             self.send_response(200); self.send_header('Content-Type','video/mp4'); self.send_header('Content-Length',str(f.stat().st_size)); self.end_headers()
