@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+engine/assets/*
+engine/renders/*
+projects/*.json
+!.gitkeep
