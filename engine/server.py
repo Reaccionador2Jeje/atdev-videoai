@@ -189,7 +189,7 @@ class API(BaseHTTPRequestHandler):
             return
         if path.startswith("/download/"):
             name = Path(path).name
-            if not re.fullmatch(r"video-[a-f0-9]{12}\\.mp4", name):
+            if not re.fullmatch(r"video-[a-f0-9]{12}\.mp4", name):
                 self.send_error(404)
                 return
             query = parse_qs(urlparse(self.path).query)
