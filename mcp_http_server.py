@@ -11,22 +11,25 @@ import oauth_provider as oauth
 
 HOST = os.environ.get("ATDEV_MCP_HOST", "127.0.0.1")
 PORT = int(os.environ.get("ATDEV_MCP_PORT", "8766"))
-TOKEN = os.environ.get("ATDEV_MCP_TOKEN", "")
 MAX_BODY = 2 * 1024 * 1024
 PROTOCOL_VERSIONS = {"2025-03-26", "2024-11-05"}
 TOOL_SCOPES = {
     "videoai_health": None,
     "create_video_project": "videoai.write",
-    "create_video_from_code": "videoai.write",
+    "create_video_from_code": ("videoai.write", "videoai.render"),
     "render_video_project": "videoai.render",
     "list_video_projects": "videoai.read",
     "get_video_download": "videoai.read",
 }
 
-if HOST not in ("127.0.0.1", "localhost", "::1") and len(TOKEN) < 24:
+if HOST not in ("127.0.0.1", "localhost", "::1") and (
+    not oauth.BASE_URL.startswith("https://")
+    or not os.environ.get("ATDEV_OAUTH_USERNAME")
+    or not os.environ.get("ATDEV_OAUTH_PASSWORD")
+):
     raise SystemExit(
-        "Refusing public bind without ATDEV_MCP_TOKEN "
-        "(use a random token of at least 24 characters)."
+        "Public bind requires ATDEV_PUBLIC_BASE_URL=https://... and "
+        "ATDEV_OAUTH_USERNAME/ATDEV_OAUTH_PASSWORD."
     )
 
 oauth.initialize()
@@ -69,12 +72,8 @@ class MCPHandler(BaseHTTPRequestHandler):
         return self.rfile.read(size)
 
     def _authorized_transport(self):
-        if not TOKEN:
-            return True
-        import hmac
-        return hmac.compare_digest(
-            self.headers.get("Authorization", ""), "Bearer " + TOKEN
-        )
+        # OAuth is enforced per tool; discovery and initialization stay public.
+        return True
 
     def _json_error(self, request_id, code, message, status=400):
         self.reply(status, {
@@ -149,10 +148,6 @@ class MCPHandler(BaseHTTPRequestHandler):
         if parsed.path != "/mcp":
             self.reply(404, {"error": "Not found"})
             return
-        if not self._authorized_transport():
-            self.reply(401, {"error": "Unauthorized"},
-                       {"WWW-Authenticate": "Bearer"})
-            return
         content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip()
         if content_type != "application/json":
             self.reply(415, {"error": "Content-Type must be application/json"})
@@ -215,11 +210,13 @@ class MCPHandler(BaseHTTPRequestHandler):
                 payload = {"content": [{"type": "text", "text": "Unknown tool."}],
                            "isError": True}
             else:
-                scope = TOOL_SCOPES[name]
-                if scope:
+                scopes = TOOL_SCOPES[name]
+                if scopes:
+                    if isinstance(scopes, str):
+                        scopes = (scopes,)
                     auth = self.headers.get("Authorization", "")
                     bearer = auth[7:].strip() if auth.startswith("Bearer ") else ""
-                    if not oauth.verify_access_token(bearer, scope):
+                    if not all(oauth.verify_access_token(bearer, scope) for scope in scopes):
                         metadata_url = (oauth.RESOURCE and
                                         oauth.ISSUER + "/.well-known/oauth-protected-resource")
                         challenge = ('Bearer resource_metadata="' + metadata_url +
@@ -266,5 +263,5 @@ if __name__ == "__main__":
     print("AtDev VideoAI MCP: " + scheme + "://" + HOST + ":" + str(PORT) + "/mcp")
     print("OAuth issuer: " + (oauth.ISSUER or "not configured"))
     print("OAuth account configured: " + str(bool(os.environ.get("ATDEV_OAUTH_USERNAME") and os.environ.get("ATDEV_OAUTH_PASSWORD"))))
-    print("Transport bearer guard: " + ("enabled" if TOKEN else "disabled"))
+    print("Per-tool OAuth scopes: enabled")
     ThreadingHTTPServer((HOST, PORT), MCPHandler).serve_forever()
