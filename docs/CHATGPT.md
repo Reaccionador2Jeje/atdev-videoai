@@ -1,68 +1,126 @@
 # AtDev VideoAI for ChatGPT
 
-AtDev VideoAI exposes its video-project tools through the Model Context Protocol (MCP). ChatGPT can discover the tools and call them from a conversation when the account and workspace allow custom MCP apps.
+AtDev VideoAI exposes video-project tools through the Model Context Protocol (MCP). A compatible ChatGPT workspace can discover these tools and call them from a conversation.
 
-## What the integration can do
+## Capabilities
 
 - Check whether the local FFmpeg rendering engine is online.
-- Create and save an editable video project from structured scene data.
-- Create a project from declarative JSON (JSON data only; it never executes supplied code).
+- Create and save editable video projects.
+- Generate projects from declarative JSON (the JSON is data, never executed as code).
 - List saved projects.
-- Render a saved project to MP4 through FFmpeg.
+- Render saved projects to MP4.
+- Retrieve a temporary, signed HTTPS download URL for a rendered MP4.
 
-The renderer is local-first and does not require a paid AI provider or a credit balance. It is not a replacement for a full YouTube analytics service, and it does not generate photorealistic AI footage: the current renderer assembles scenes, imported images, text, motion, transitions, and audio.
+The renderer is local-first and does not require a paid AI provider or credit balance. It assembles scenes, imported images, text, motion, transitions and audio; it does not synthesize AI footage.
 
-## MCP transport
+## ChatGPT connection
 
-The ChatGPT-facing endpoint is:
+The MCP endpoint is:
 
     https://YOUR-HOST/mcp
 
-The server implements stateless Streamable HTTP request/response over JSON. It supports MCP initialization, ping, tool discovery, tool calls, and notifications. It does not provide server-initiated SSE streams or resumable sessions; GET and DELETE return HTTP 405.
+ChatGPT custom MCP apps support remote MCP servers over streaming HTTP and OAuth. In a workspace that permits custom MCP connections:
 
-For local development, run the HTTP MCP service:
+1. Open ChatGPT on the web and go to **Plugins / Apps**.
+2. Choose **Add custom MCP server**.
+3. Enter a name such as **AtDev VideoAI** and the HTTPS MCP endpoint above.
+4. Choose **OAuth** authentication.
+5. Complete the AtDev VideoAI sign-in and approve the requested scopes.
+6. Review the discovered tools and their permissions before enabling the connection.
 
-    python mcp_http_server.py
+Custom MCP app availability and workspace controls are determined by ChatGPT. This repository cannot enable account features or create a connection inside a user's ChatGPT account.
 
-It listens on:
+## OAuth 2.1 provider
 
-    http://127.0.0.1:8766/mcp
+The repository includes a lightweight, single-account OAuth 2.1 authorization-code provider with PKCE S256, dynamic client registration, protected-resource metadata, authorization-server metadata, opaque access tokens, rotating refresh tokens and scope checks.
 
-Start the FFmpeg engine separately if you want to render:
+Configure these environment variables on the MCP service:
+
+| Variable | Purpose |
+|---|---|
+| `ATDEV_PUBLIC_BASE_URL` | Public HTTPS origin, for example `https://videoai.example.com` |
+| `ATDEV_OAUTH_USERNAME` | Account name used on the AtDev authorization page |
+| `ATDEV_OAUTH_PASSWORD` | Strong, unique password for the AtDev authorization page |
+| `ATDEV_OAUTH_DB` | Optional path for persistent OAuth SQLite state; defaults to `oauth.sqlite3` |
+| `ATDEV_MCP_HOST` | Bind address; public binds require HTTPS base URL and OAuth credentials |
+| `ATDEV_MCP_PORT` | MCP HTTP port; defaults to `8766` |
+
+The provider publishes:
+
+- `/.well-known/oauth-protected-resource`
+- `/.well-known/oauth-authorization-server`
+- `/oauth/register`
+- `/oauth/authorize`
+- `/oauth/token`
+- `/mcp`
+
+It supports public OAuth clients using `token_endpoint_auth_method=none`, authorization code with PKCE S256, refresh tokens, and these scopes:
+
+- `videoai.read` — list projects and retrieve download links.
+- `videoai.write` — create editable projects.
+- `videoai.render` — render MP4 videos.
+- `offline_access` — allow refresh-token continuity.
+
+The HTTP MCP transport leaves initialization and tool discovery public, then checks the bearer token, audience, expiry and required scope for each protected tool call. The health tool is anonymous.
+
+**Important deployment note:** this built-in provider is a self-hosted starter for one account, not a reviewed multi-user identity platform. OpenAI recommends an established identity provider for production deployments. For a public multi-user service, integrate a managed provider and have it issue tokens for this MCP resource instead of sharing one server login.
+
+## Signed MP4 delivery
+
+Set these variables on both the MCP process and the FFmpeg engine:
+
+| Variable | Purpose |
+|---|---|
+| `ATDEV_PUBLIC_BASE_URL` | Public HTTPS origin used to create download URLs |
+| `ATDEV_DOWNLOAD_SECRET` | Random secret of at least 32 characters used to sign and verify URLs |
+
+After a render, AtDev returns a URL like:
+
+    https://YOUR-HOST/download/video-....mp4?expires=...&sig=...
+
+The link expires after 15 minutes. The renderer verifies the HMAC signature, filename and expiry before serving the file. Treat the link as a temporary bearer link: anyone who receives it can download the video until it expires.
+
+## Reverse proxy routing
+
+The MCP process listens on loopback port 8766. The FFmpeg engine listens on loopback port 8765. Configure your HTTPS reverse proxy so these paths reach the correct local service:
+
+| Public path | Local service |
+|---|---|
+| `/mcp` | `127.0.0.1:8766` |
+| `/.well-known/*` | `127.0.0.1:8766` |
+| `/oauth/*` | `127.0.0.1:8766` |
+| `/download/*` | `127.0.0.1:8765` |
+
+Keep the renderer port private; do not expose `/api/render` publicly. Persist the OAuth database and rendered files across restarts.
+
+## Local development
+
+For the local editor and renderer:
 
     python engine/server.py
 
-## Connecting from ChatGPT
+For the MCP HTTP process, set a public HTTPS base URL only when you have a real HTTPS reverse proxy or secure tunnel. The OAuth endpoints require that public origin to match the deployed URL.
 
-1. Deploy the MCP service at a stable HTTPS address, or use a supported Secure MCP Tunnel for a private/local server.
-2. In a ChatGPT account/workspace that permits custom MCP apps, open the Apps/Plugins connection settings and choose the option to add a custom MCP server.
-3. Enter the HTTPS endpoint ending in `/mcp`.
-4. Select the authentication mode supported by the workspace and server, then review the tools and permissions before enabling it.
-5. Refresh the app after changing tool names or descriptions.
+    python mcp_http_server.py
 
-**Account availability:** custom MCP app creation and write-capable tools are controlled by ChatGPT plan and workspace settings. OpenAI's current help documentation lists full custom MCP support for Business and Enterprise/Edu workspaces; Pro access is more limited, and Free availability is not listed. This repository cannot enable those account features.
+The stdio MCP bridge remains available for local MCP clients:
 
-## Security notes
+    python mcp_server.py
 
-- Keep the service bound to loopback for local use.
-- Do not publish an unauthenticated instance that can create projects or render files.
-- A non-loopback bind is refused unless `ATDEV_MCP_TOKEN` contains at least 24 characters.
-- The optional bearer-token guard is intended for compatible MCP clients. ChatGPT authentication choices can vary by workspace; do not assume a manually entered bearer token is accepted. If the ChatGPT connection requires OAuth, add an OAuth authorization server before exposing this service publicly.
-- Put TLS in front of the service using a trusted HTTPS reverse proxy or supported secure tunnel. The Python server itself does not terminate TLS.
-- Review tool permissions before allowing write/render actions.
+## Security and operational limits
 
-## Environment variables
+- Use HTTPS for any public connection.
+- Use a strong unique OAuth password and keep it out of source control.
+- Keep `oauth.sqlite3`, token material and rendered media on persistent private storage.
+- Do not expose the FFmpeg engine's `/api/render` route to the public Internet.
+- Temporary download URLs are bearer links and should not be posted publicly.
+- This implementation is a single-account starter, not a substitute for an audited identity provider, production account management, rate limiting or a security review.
+- The Python HTTP server does not terminate TLS; TLS must be provided by a trusted reverse proxy or secure tunnel.
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `ATDEV_MCP_HOST` | `127.0.0.1` | Bind address |
-| `ATDEV_MCP_PORT` | `8766` | HTTP MCP port |
-| `ATDEV_MCP_TOKEN` | empty | Optional bearer token; required for non-loopback binding |
+## Tests
 
-## Protocol test
-
-Run all tests, including the MCP transport tests:
+Run:
 
     python -m unittest discover -s tests -v
 
-The GitHub Actions workflow runs this test suite on pushes and pull requests.
+GitHub Actions runs syntax checks and the test suite on pushes and pull requests.
