@@ -14,7 +14,7 @@ PORT = int(os.environ.get("ATDEV_PORT", "8765"))
 FORMATS = {"16:9": (1280, 720), "9:16": (720, 1280), "1:1": (720, 720)}
 MIME_EXT = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp",
             "audio/mpeg": ".mp3", "audio/mp3": ".mp3", "audio/wav": ".wav",
-            "audio/x-wav": ".wav", "audio/mp4": ".m4a", "audio/aac": ".aac",
+            "audio/x-wav": ".wav", "audio/vnd.wave": ".wav", "audio/mp4": ".m4a", "audio/x-m4a": ".m4a", "audio/aac": ".aac", "audio/x-aac": ".aac",
             "audio/ogg": ".ogg", "audio/webm": ".webm", "audio/flac": ".flac"}
 
 def run(cmd, timeout=240):
