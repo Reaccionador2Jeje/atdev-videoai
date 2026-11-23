@@ -67,19 +67,22 @@ class OAuthProviderTests(unittest.TestCase):
         })
         query = parse_qs(urlparse(callback).query)
         self.assertEqual(query["state"][0], "state-test")
+        self.assertEqual(query["iss"][0], oauth.ISSUER)
         tokens = oauth.token_endpoint({
             "grant_type": "authorization_code",
             "client_id": client["client_id"],
             "redirect_uri": client["redirect_uris"][0],
             "code": query["code"][0],
-            "code_verifier": verifier
+            "code_verifier": verifier,
+            "resource": oauth.RESOURCE
         })
         self.assertTrue(oauth.verify_access_token(tokens["access_token"], "videoai.read"))
         self.assertFalse(oauth.verify_access_token(tokens["access_token"], "videoai.render"))
         refreshed = oauth.token_endpoint({
             "grant_type": "refresh_token",
             "client_id": client["client_id"],
-            "refresh_token": tokens["refresh_token"]
+            "refresh_token": tokens["refresh_token"],
+            "resource": oauth.RESOURCE
         })
         self.assertNotEqual(tokens["refresh_token"], refreshed["refresh_token"])
         self.assertTrue(oauth.verify_access_token(refreshed["access_token"], "videoai.read"))
