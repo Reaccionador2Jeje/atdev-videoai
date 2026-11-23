@@ -87,6 +87,18 @@ class OAuthProviderTests(unittest.TestCase):
         self.assertNotEqual(tokens["refresh_token"], refreshed["refresh_token"])
         self.assertTrue(oauth.verify_access_token(refreshed["access_token"], "videoai.read"))
 
+    def test_authorization_errors_include_issuer_and_state(self):
+        client = oauth.register_client({"redirect_uris": ["https://client.example.test/callback"]})
+        destination = oauth.authorization_error_redirect({
+            "client_id": client["client_id"],
+            "redirect_uri": client["redirect_uris"][0],
+            "state": "error-state"
+        }, "invalid request")
+        query = parse_qs(urlparse(destination).query)
+        self.assertEqual(query["iss"][0], oauth.ISSUER)
+        self.assertEqual(query["state"][0], "error-state")
+        self.assertEqual(query["error"][0], "invalid_request")
+
     def test_rejects_non_https_redirect_uri(self):
         with self.assertRaises(ValueError):
             oauth.register_client({"redirect_uris": ["http://example.test/callback"]})
