@@ -40,10 +40,12 @@ Configure these environment variables on the MCP service:
 |---|---|
 | `ATDEV_PUBLIC_BASE_URL` | Public HTTPS origin, for example `https://videoai.example.com` |
 | `ATDEV_OAUTH_USERNAME` | Account name used on the AtDev authorization page |
-| `ATDEV_OAUTH_PASSWORD` | Strong, unique password for the AtDev authorization page |
+| `ATDEV_OAUTH_PASSWORD` | Strong, unique password for the AtDev authorization page (minimum 16 characters) |
 | `ATDEV_OAUTH_DB` | Optional path for persistent OAuth SQLite state; defaults to `oauth.sqlite3` |
 | `ATDEV_MCP_HOST` | Bind address; public binds require HTTPS base URL and OAuth credentials |
 | `ATDEV_MCP_PORT` | MCP HTTP port; defaults to `8766` |
+
+The provider uses DCR and PKCE S256, publishes `authorization_response_iss_parameter_supported: true`, includes the issuer (`iss`) in successful and error authorization redirects, and preserves the requested `resource` as the token audience. It advertises `offline_access` and rotates refresh tokens.
 
 The provider publishes:
 
@@ -72,7 +74,7 @@ Set these variables on both the MCP process and the FFmpeg engine:
 | Variable | Purpose |
 |---|---|
 | `ATDEV_PUBLIC_BASE_URL` | Public HTTPS origin used to create download URLs |
-| `ATDEV_DOWNLOAD_SECRET` | Random secret of at least 32 characters used to sign and verify URLs |
+| `ATDEV_DOWNLOAD_SECRET` | Random secret of at least 32 characters used to sign and verify URLs; configure the same value on both processes |
 
 After a render, AtDev returns a URL like:
 
