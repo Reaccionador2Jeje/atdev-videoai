@@ -45,7 +45,7 @@ For an HTTP MCP endpoint, start:
 
 Local endpoint: http://127.0.0.1:8766/mcp
 
-For remote ChatGPT MCP connections, deploy behind HTTPS and set `ATDEV_MCP_HOST` and a random `ATDEV_MCP_TOKEN` of at least 24 characters. The HTTP server refuses a non-loopback bind without that token. Configure the remote MCP URL and bearer token in a ChatGPT MCP-capable connection/client. Availability of remote MCP connections depends on the ChatGPT workspace and account configuration; the local stdio bridge is for compatible desktop MCP clients.
+For ChatGPT-specific setup, account availability, protocol details and security notes, see [docs/CHATGPT.md](docs/CHATGPT.md). The HTTP endpoint implements stateless Streamable HTTP MCP over JSON. ChatGPT custom-app availability depends on the plan and workspace; this repository cannot enable account features.
 
 See [engine/README.md](engine/README.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
