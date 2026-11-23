@@ -103,6 +103,9 @@ class MCPHandler(BaseHTTPRequestHandler):
         method = message.get("method")
         request_id = message.get("id")
         params = message.get("params") or {}
+        if not isinstance(params, dict):
+            self._json_error(request_id, -32602, "Request params must be an object")
+            return
 
         # MCP notifications have no id and must not receive a JSON-RPC response.
         if request_id is None:
