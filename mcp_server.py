@@ -38,12 +38,16 @@ TOOLS = [
     {"name": "list_video_projects", "title": "List saved video projects", "description": "Use when the user asks to find or review projects already saved in AtDev VideoAI. Read-only; returns project IDs, names and scene counts.",
      "_meta": {"securitySchemes": [{"type": "oauth2", "scopes": ["videoai.read"]}]},
      "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False},
-     "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}}
+     "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
+    {"name": "get_video_download", "title": "Get a temporary MP4 download link", "description": "Create a short-lived signed HTTPS download URL for a rendered video. Requires its filename from a previous render result.",
+     "_meta": {"securitySchemes": [{"type": "oauth2", "scopes": ["videoai.read"]}]},
+     "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False},
+     "inputSchema": {"type": "object", "properties": {"filename": {"type": "string", "description": "Rendered filename, for example video-0123456789ab.mp4."}}, "required": ["filename"], "additionalProperties": False}}
 ]
 
 
 def signed_download_url(filename):
-    if not re.fullmatch(r"video-[a-f0-9]{12}\\.mp4", str(filename)):
+    if not re.fullmatch(r"video-[a-f0-9]{12}\.mp4", str(filename)):
         raise ValueError("Invalid rendered video filename.")
     path = ROOT / "engine" / "renders" / filename
     if not path.is_file():
