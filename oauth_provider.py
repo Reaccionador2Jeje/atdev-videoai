@@ -12,6 +12,7 @@ import os
 import secrets
 import sqlite3
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode
 
@@ -29,47 +30,55 @@ def _hash(value):
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+@contextmanager
 def _db():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(str(DB_PATH), timeout=15)
     connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA journal_mode=WAL")
-    connection.executescript("""
-        CREATE TABLE IF NOT EXISTS clients (
-            client_id TEXT PRIMARY KEY,
-            redirect_uris TEXT NOT NULL,
-            created_at INTEGER NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS pending (
-            request_id TEXT PRIMARY KEY,
-            data TEXT NOT NULL,
-            expires_at INTEGER NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS auth_codes (
-            code_hash TEXT PRIMARY KEY,
-            client_id TEXT NOT NULL,
-            redirect_uri TEXT NOT NULL,
-            challenge TEXT NOT NULL,
-            scope TEXT NOT NULL,
-            resource TEXT NOT NULL,
-            expires_at INTEGER NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS access_tokens (
-            token_hash TEXT PRIMARY KEY,
-            client_id TEXT NOT NULL,
-            scope TEXT NOT NULL,
-            resource TEXT NOT NULL,
-            expires_at INTEGER NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS refresh_tokens (
-            token_hash TEXT PRIMARY KEY,
-            client_id TEXT NOT NULL,
-            scope TEXT NOT NULL,
-            resource TEXT NOT NULL,
-            expires_at INTEGER NOT NULL
-        );
-    """)
-    return connection
+    try:
+        connection.execute("PRAGMA journal_mode=WAL")
+        connection.executescript("""
+            CREATE TABLE IF NOT EXISTS clients (
+                client_id TEXT PRIMARY KEY,
+                redirect_uris TEXT NOT NULL,
+                created_at INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS pending (
+                request_id TEXT PRIMARY KEY,
+                data TEXT NOT NULL,
+                expires_at INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS auth_codes (
+                code_hash TEXT PRIMARY KEY,
+                client_id TEXT NOT NULL,
+                redirect_uri TEXT NOT NULL,
+                challenge TEXT NOT NULL,
+                scope TEXT NOT NULL,
+                resource TEXT NOT NULL,
+                expires_at INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS access_tokens (
+                token_hash TEXT PRIMARY KEY,
+                client_id TEXT NOT NULL,
+                scope TEXT NOT NULL,
+                resource TEXT NOT NULL,
+                expires_at INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS refresh_tokens (
+                token_hash TEXT PRIMARY KEY,
+                client_id TEXT NOT NULL,
+                scope TEXT NOT NULL,
+                resource TEXT NOT NULL,
+                expires_at INTEGER NOT NULL
+            );
+        """)
+        yield connection
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
 
 def _clean_redirect(uri):
