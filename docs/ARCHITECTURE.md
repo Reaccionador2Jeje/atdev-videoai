@@ -1,33 +1,38 @@
 # Architecture
 
 ## Product surfaces
-1. **Web Studio:** independent interface for creating and managing video projects.
-2. **Render Engine:** local or self-hosted service that converts declarative project data into video files.
-3. **ChatGPT Bridge:** MCP-compatible integration for drafting projects, inspecting scenes, and requesting renders.
+1. **Web Studio:** standalone HTML/CSS/JavaScript editor.
+2. **Local Render Engine:** Python API that invokes FFmpeg on the user's device.
+3. **MCP Bridge:** stdio and authenticated HTTP transports for MCP-compatible clients, including supported ChatGPT MCP connection workflows.
 
-## Design rules
-- Core workflows do not require an account, credits, or a paid AI provider.
-- AI-assisted features are adapters; the editor and renderer work without them.
-- Projects use portable, versioned JSON and user-owned assets.
-- User media is not silently uploaded to external services.
-- YouTube analytics is optional and respects API quotas.
-- Zero credits means no artificial in-product credit meter, not infinite hosted compute.
+## Current implementation
+- Versioned project JSON with scene and audio-track data.
+- Image assets embedded in project JSON and uploaded to the local renderer on explicit render.
+- Video track composed from scenes; independent audio clips have start offsets and volume.
+- FFmpeg scene rendering with text, imported images, zoom motion, fade-in and crossfade transitions.
+- H.264/AAC MP4 output.
+- Declarative JSON video generation; no arbitrary code execution.
+- MCP tools for engine health, project creation, code-to-project generation, rendering and project listing.
 
-## Initial stack
-- Frontend: semantic HTML, CSS, and vanilla JavaScript for the first prototype.
-- Video output: FFmpeg in a future rendering service.
-- Project format: versioned JSON.
-- Backend: Python service when rendering endpoints are introduced.
-- ChatGPT integration: separate MCP server adapter.
+## Local-first rules
+- Core editor and renderer do not require an account, credits, or a paid AI provider.
+- User media is not uploaded to third-party services by the application.
+- External analytics and AI providers remain optional.
+- The local render API binds to loopback by default.
+- HTTP MCP refuses a public bind unless a sufficiently long bearer token is configured. Public deployment still requires HTTPS and appropriate reverse-proxy/security controls.
 
-## Milestones
-### M0 — Repository foundation
-Project identity, principles, web studio shell, contribution workflow.
-### M1 — Code-driven video prototype
-Versioned scene/timeline JSON, text, shapes, images, audio, preview, FFmpeg export.
-### M2 — Creator research
-Idea organizer, keyword workspace, optional YouTube Data API adapter.
-### M3 — ChatGPT integration
-MCP tools for project creation, scene editing, inspection, and render requests.
-### M4 — Community and portability
-Import/export bundles, templates, reusable components, self-hosting documentation.
+## Run
+Start the renderer with `python engine/server.py`, serve the web files with `python -m http.server 8000`, then open `/editor.html`.
+
+For MCP stdio, configure an MCP client to launch `python /absolute/path/to/atdev-videoai/mcp_server.py`.
+For an HTTP MCP endpoint, start the renderer and then run `python mcp_http_server.py`. The endpoint is `http://127.0.0.1:8766/mcp`. For remote use, configure a secure HTTPS reverse proxy and set `ATDEV_MCP_HOST`, `ATDEV_MCP_TOKEN` (at least 24 characters), and `ATDEV_MCP_PORT`.
+
+## MCP tools
+- `videoai_health`
+- `create_video_project`
+- `create_video_from_code`
+- `render_video_project`
+- `list_video_projects`
+
+## Roadmap
+Creator research, keyword exploration, thumbnail composition, optional YouTube analytics, and richer visual/audio effects remain future modules.
