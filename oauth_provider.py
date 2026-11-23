@@ -15,7 +15,7 @@ import sqlite3
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from urllib.parse import parse_qs, urlencode
+from urllib.parse import urlencode, urlsplit
 
 ROOT = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("ATDEV_OAUTH_DB", str(ROOT / "oauth.sqlite3")))
@@ -85,9 +85,15 @@ def _db():
 def _clean_redirect(uri):
     if not isinstance(uri, str) or len(uri) > 2048:
         return False
-    if uri.startswith("https://"):
-        return True
-    return uri.startswith("http://127.0.0.1:") or uri.startswith("http://localhost:")
+    try:
+        parsed = urlsplit(uri)
+        if not parsed.netloc or parsed.fragment or parsed.username or parsed.password:
+            return False
+        if parsed.scheme == "https":
+            return bool(parsed.hostname)
+        return parsed.scheme == "http" and parsed.hostname in ("127.0.0.1", "localhost") and parsed.port is not None
+    except ValueError:
+        return False
 
 
 def initialize():
@@ -138,8 +144,8 @@ def register_client(payload):
     responses = payload.get("response_types", ["code"])
     if not isinstance(grants, list) or not isinstance(responses, list):
         raise ValueError("grant_types and response_types must be arrays.")
-    if set(grants) - {"authorization_code", "refresh_token"} or "authorization_code" not in grants:
-        raise ValueError("Unsupported grant_types.")
+    if set(grants) - {"authorization_code", "refresh_token"} or not {"authorization_code", "refresh_token"}.issubset(set(grants)):
+        raise ValueError("Both authorization_code and refresh_token grant types are required.")
     if responses != ["code"]:
         raise ValueError("Only the authorization code response type is supported.")
     client_id = "atdev_" + secrets.token_urlsafe(24)
