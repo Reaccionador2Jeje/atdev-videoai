@@ -26,10 +26,11 @@ if HOST not in ("127.0.0.1", "localhost", "::1") and (
     not oauth.BASE_URL.startswith("https://")
     or not os.environ.get("ATDEV_OAUTH_USERNAME")
     or not os.environ.get("ATDEV_OAUTH_PASSWORD")
+    or len(os.environ.get("ATDEV_DOWNLOAD_SECRET", "")) < 32
 ):
     raise SystemExit(
         "Public bind requires ATDEV_PUBLIC_BASE_URL=https://... and "
-        "ATDEV_OAUTH_USERNAME/ATDEV_OAUTH_PASSWORD."
+        "ATDEV_OAUTH_USERNAME/ATDEV_OAUTH_PASSWORD and a 32+ character ATDEV_DOWNLOAD_SECRET."
     )
 
 oauth.initialize()
