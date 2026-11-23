@@ -9,6 +9,7 @@ import hmac
 import html
 import json
 import os
+import re
 import secrets
 import sqlite3
 import time
@@ -177,7 +178,7 @@ def begin_authorization(query):
     if query.get("response_type") != "code":
         raise ValueError("Only response_type=code is supported.")
     challenge = query.get("code_challenge", "")
-    if query.get("code_challenge_method") != "S256" or not __import__("re").fullmatch(r"[A-Za-z0-9_-]{43}", challenge):
+    if query.get("code_challenge_method") != "S256" or not re.fullmatch(r"[A-Za-z0-9_-]{43}", challenge):
         raise ValueError("PKCE with S256 is required.")
     requested = set(query.get("scope", "videoai.read videoai.write videoai.render").split())
     if not requested or requested - SCOPES:
