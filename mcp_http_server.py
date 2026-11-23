@@ -88,6 +88,10 @@ class MCPHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
+        if parsed.path == "/mcp":
+            self.reply(405, {"error": "GET is not supported on the stateless MCP endpoint"},
+                       {"Allow": "POST, OPTIONS"})
+            return
         if parsed.path == "/.well-known/oauth-authorization-server":
             self.reply(200, oauth.metadata(), {"Cache-Control": "public, max-age=300"})
             return
