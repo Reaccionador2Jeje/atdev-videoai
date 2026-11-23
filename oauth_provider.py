@@ -90,6 +90,7 @@ def metadata():
         return {"error": "ATDEV_PUBLIC_BASE_URL is required for OAuth discovery."}
     return {
         "issuer": ISSUER,
+        "authorization_response_iss_parameter_supported": True,
         "authorization_endpoint": ISSUER + "/oauth/authorize",
         "token_endpoint": ISSUER + "/oauth/token",
         "registration_endpoint": ISSUER + "/oauth/register",
@@ -212,7 +213,6 @@ def complete_authorization(form):
     request_id = form.get("request_id", "")
     with _db() as db:
         row = db.execute("SELECT * FROM pending WHERE request_id=?", (request_id,)).fetchone()
-        db.execute("DELETE FROM pending WHERE request_id=?", (request_id,))
     if not row or row["expires_at"] < int(time.time()):
         raise ValueError("Authorization request expired. Start the connection again.")
     if form.get("approve") != "yes":
@@ -230,11 +230,36 @@ def complete_authorization(form):
                    (_hash(code), data["client_id"], data["redirect_uri"],
                     data["challenge"], data["scope"], data["resource"],
                     int(time.time()) + 180))
+        db.execute("DELETE FROM pending WHERE request_id=?", (request_id,))
     separator = "&" if "?" in data["redirect_uri"] else "?"
     return data["redirect_uri"] + separator + urlencode({
-        "code": code, "state": data["state"]
+        "code": code, "state": data["state"], "iss": ISSUER
     })
 
+
+
+def pending_authorization(request_id):
+    with _db() as db:
+        row = db.execute("SELECT * FROM pending WHERE request_id=?", (request_id,)).fetchone()
+    if not row or row["expires_at"] < int(time.time()):
+        return None
+    return json.loads(row["data"])
+
+
+def authorization_error_redirect(query, description):
+    client = _client(query.get("client_id", ""))
+    if not client:
+        return None
+    redirect_uri = query.get("redirect_uri", "")
+    if redirect_uri not in json.loads(client["redirect_uris"]):
+        return None
+    separator = "&" if "?" in redirect_uri else "?"
+    return redirect_uri + separator + urlencode({
+        "error": "invalid_request",
+        "error_description": str(description)[:240],
+        "state": query.get("state", ""),
+        "iss": ISSUER,
+    })
 
 def token_endpoint(form):
     grant = form.get("grant_type")
@@ -248,6 +273,8 @@ def token_endpoint(form):
             if row:
                 db.execute("DELETE FROM auth_codes WHERE code_hash=?", (_hash(code),))
         if not row or row["expires_at"] < int(time.time()) or row["client_id"] != client_id or row["redirect_uri"] != redirect_uri:
+            raise ValueError("invalid_grant")
+        if form.get("resource") and form["resource"] != row["resource"]:
             raise ValueError("invalid_grant")
         if not (43 <= len(verifier) <= 128):
             raise ValueError("invalid_grant")
@@ -265,6 +292,8 @@ def token_endpoint(form):
             if row:
                 db.execute("DELETE FROM refresh_tokens WHERE token_hash=?", (_hash(refresh),))
         if not row or row["expires_at"] < int(time.time()) or row["client_id"] != client_id:
+            raise ValueError("invalid_grant")
+        if form.get("resource") and form["resource"] != row["resource"]:
             raise ValueError("invalid_grant")
         scope, resource = row["scope"], row["resource"]
         requested_scope = set(form.get("scope", scope).split())
