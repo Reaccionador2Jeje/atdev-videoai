@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Local AtDev VideoAI renderer with images, audio, motion and transitions."""
-import base64, json, os, re, shutil, subprocess, tempfile, uuid
+import base64, hashlib, hmac, json, os, re, shutil, subprocess, tempfile, time, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "renders"
@@ -186,6 +186,38 @@ class API(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/api/health":
             self.reply(200, {"ok": True, "ffmpeg": bool(shutil.which("ffmpeg"))})
+            return
+        if path.startswith("/download/"):
+            name = Path(path).name
+            if not re.fullmatch(r"video-[a-f0-9]{12}\\.mp4", name):
+                self.send_error(404)
+                return
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                expires = int(query.get("expires", ["0"])[0])
+            except ValueError:
+                expires = 0
+            signature = query.get("sig", [""])[0]
+            secret = os.environ.get("ATDEV_DOWNLOAD_SECRET", "")
+            if len(secret) < 32 or expires < int(time.time()) or expires > int(time.time()) + 3600:
+                self.send_error(403)
+                return
+            expected = hmac.new(secret.encode(), (name + ":" + str(expires)).encode(), hashlib.sha256).hexdigest()
+            if not hmac.compare_digest(signature, expected):
+                self.send_error(403)
+                return
+            file = OUT / name
+            if not file.is_file():
+                self.send_error(404)
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "video/mp4")
+            self.send_header("Content-Disposition", 'attachment; filename="' + name + '"')
+            self.send_header("Content-Length", str(file.stat().st_size))
+            self.send_header("Cache-Control", "private, no-store")
+            self.end_headers()
+            with file.open("rb") as stream:
+                shutil.copyfileobj(stream, self.wfile)
             return
         if path.startswith("/renders/"):
             name = Path(path).name
