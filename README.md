@@ -39,6 +39,7 @@ The stdio bridge exposes:
 - `create_video_from_code`
 - `render_video_project`
 - `list_video_projects`
+- `get_video_download`
 
 For an HTTP MCP endpoint, start:
 
