@@ -60,6 +60,10 @@ class MCPHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'")
         self.end_headers()
         self.wfile.write(body)
 
@@ -114,6 +118,9 @@ class MCPHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/oauth/register":
             try:
+                if self.headers.get("Content-Type", "").split(";", 1)[0].strip() != "application/json":
+                    self.reply(415, {"error": "Content-Type must be application/json"})
+                    return
                 raw = self.read_body()
                 payload = json.loads(raw.decode("utf-8"))
                 self.reply(201, oauth.register_client(payload),
@@ -125,6 +132,9 @@ class MCPHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/oauth/token":
             try:
+                if self.headers.get("Content-Type", "").split(";", 1)[0].strip() != "application/x-www-form-urlencoded":
+                    self.reply(415, {"error": "Content-Type must be application/x-www-form-urlencoded"})
+                    return
                 raw = self.read_body().decode("utf-8")
                 form = {key: values[-1] for key, values in parse_qs(raw).items()}
                 result = oauth.token_endpoint(form)
