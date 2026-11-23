@@ -74,8 +74,10 @@ def call_engine(project):
             if result.get("filename"):
                 try:
                     result["download_url"] = signed_download_url(result["filename"])
+                    result["url"] = result["download_url"]
                 except (RuntimeError, ValueError) as error:
                     result["download_url"] = None
+                    result.pop("url", None)
                     result["download_note"] = str(error)
             return result
     except urllib.error.URLError as error:
