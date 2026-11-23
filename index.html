@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10131b"><meta name="description" content="AtDev VideoAI — open-source video creation without credits.">
+<title>AtDev VideoAI Studio</title><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+<a class="brand" href="#"><span class="mark">A</span><span><b>AtDev</b><small>VIDEOAI</small></span></a>
+<div class="side-label">WORKSPACE</div>
+<nav><a class="active" href="#studio">▣　Video studio</a><a href="#ideas">✳　Idea research</a><a href="#keywords">⌕　Keyword explorer</a><a href="#thumbs">▧　Thumbnails</a><a href="#insights">⌁　Channel insights</a></nav>
+<div class="side-bottom"><div class="free"><b>●　Free forever</b><p>No credits. No artificial limits.</p></div><div class="side-label">ATDEV VIDEOAI · PREVIEW 0.1</div></div>
+</aside>
+<main id="studio">
+<header><span>Workspace　/　<b>Video studio</b></span><span class="status">● OPEN SOURCE</span></header>
+<section class="hero"><div><small>YOUR CREATIVE WORKSPACE</small><h1>Make something <em>worth watching.</em></h1><p>Plan, build, and render videos with tools you control.</p></div><button id="new">＋ New project</button></section>
+<section class="stats"><article><small>PROJECTS</small><strong id="count">0</strong><p>Saved in this browser</p></article><article><small>CREDITS USED</small><strong class="green">0</strong><p>There is no credit system</p></article><article><small>RENDER ENGINE</small><strong class="engine">Not connected</strong><p>Local rendering is planned</p></article></section>
+<section class="section-title"><div><h2>Recent projects</h2><p>Your video ideas, all in one place.</p></div><span>YOUR WORKSPACE</span></section>
+<section class="cards" id="cards"><article class="create"><div class="plus">＋</div><h3>Create your first video</h3><p>Start with a blank project and build it scene by scene.</p><button class="secondary" id="start">Create project</button></article><article class="feature"><small>COMING NEXT</small><div class="symbol">✳</div><h3>Creator research</h3><p>Explore ideas, topics, and keywords for your next upload.</p></article><article class="feature purple"><small>COMING NEXT</small><div class="symbol">▧</div><h3>Thumbnail studio</h3><p>Compose thumbnails with reusable visual elements.</p></article></section>
+<footer><span>✦</span><p><b>Built for creative freedom.</b> Your projects belong to you. Open tools, exportable files, and no credit packs.</p><a href="https://github.com/Reaccionador2Jeje/atdev-videoai">View source ↗</a></footer>
+</main></div>
+<dialog id="dialog"><form id="form"><div class="dialog-head"><div><small>NEW WORKSPACE</small><h2>Create a project</h2></div><button type="button" class="close" id="close">×</button></div><label for="name">Project name</label><input id="name" maxlength="70" placeholder="My awesome video" required><label for="format">Video format</label><select id="format"><option value="16:9">Landscape · 16:9</option><option value="9:16">Portrait · 9:16</option><option value="1:1">Square · 1:1</option></select><div class="actions"><button type="button" class="secondary" id="cancel">Cancel</button><button class="primary">Create project</button></div></form></dialog>
+<script src="app.js"></script>
+</body></html>
