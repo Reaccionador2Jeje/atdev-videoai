@@ -124,6 +124,8 @@ def protected_resource_metadata():
 
 
 def register_client(payload):
+    if not isinstance(payload, dict):
+        raise ValueError("Client metadata must be a JSON object.")
     redirects = payload.get("redirect_uris")
     if not isinstance(redirects, list) or not redirects or len(redirects) > 10:
         raise ValueError("redirect_uris must contain 1 to 10 URLs.")
@@ -133,6 +135,8 @@ def register_client(payload):
         raise ValueError("Only public OAuth clients using token_endpoint_auth_method=none are supported.")
     grants = payload.get("grant_types", ["authorization_code", "refresh_token"])
     responses = payload.get("response_types", ["code"])
+    if not isinstance(grants, list) or not isinstance(responses, list):
+        raise ValueError("grant_types and response_types must be arrays.")
     if set(grants) - {"authorization_code", "refresh_token"} or "authorization_code" not in grants:
         raise ValueError("Unsupported grant_types.")
     if responses != ["code"]:
@@ -160,6 +164,8 @@ def _client(client_id):
 def begin_authorization(query):
     if not os.environ.get("ATDEV_OAUTH_USERNAME") or not os.environ.get("ATDEV_OAUTH_PASSWORD"):
         raise RuntimeError("Set ATDEV_OAUTH_USERNAME and ATDEV_OAUTH_PASSWORD before enabling OAuth.")
+    if len(os.environ.get("ATDEV_OAUTH_PASSWORD", "")) < 16:
+        raise RuntimeError("ATDEV_OAUTH_PASSWORD must contain at least 16 characters.")
     client_id = query.get("client_id", "")
     client = _client(client_id)
     if not client:
