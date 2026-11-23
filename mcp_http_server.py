@@ -209,10 +209,16 @@ class MCPHandler(BaseHTTPRequestHandler):
                 "capabilities": {"tools": {"listChanged": False}},
                 "serverInfo": {"name": "atdev-videoai", "version": "1.1.0"},
                 "instructions": (
-                    "AtDev VideoAI creates editable video projects and renders MP4 "
-                    "with FFmpeg. Project generation accepts declarative JSON only. "
-                    "Ask before rendering unless the user explicitly requested export. "
-                    "Rendered download links are temporary and expire after 15 minutes."
+                    "AtDev VideoAI creates editable video projects and renders motion-graphic MP4 "
+                    "videos with FFmpeg. It combines titles, text, images, transitions, "
+                    "animation and audio; it does not generate AI footage or voice. "
+                    "Use create_video_project for editable projects and "
+                    "create_video_from_code for valid declarative JSON (never execute it). "
+                    "Only render when the user explicitly asks for an MP4/export. "
+                    "For saved projects, list_video_projects first if the project ID is unknown, "
+                    "then render_video_project. Return the temporary download URL from the render. "
+                    "Download links expire after 15 minutes. Health is public; project and render "
+                    "actions require OAuth scopes."
                 ),
             }}, {"MCP-Protocol-Version": selected})
             return
