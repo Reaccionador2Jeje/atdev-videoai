@@ -291,6 +291,9 @@ def token_endpoint(form):
         redirect_uri = form.get("redirect_uri", "")
         verifier = form.get("code_verifier", "")
         with _db() as db:
+            # Claim the one-time authorization code under a write lock so two
+            # concurrent token requests cannot both exchange the same code.
+            db.execute("BEGIN IMMEDIATE")
             row = db.execute("SELECT * FROM auth_codes WHERE code_hash=?", (_hash(code),)).fetchone()
             if row:
                 db.execute("DELETE FROM auth_codes WHERE code_hash=?", (_hash(code),))
@@ -310,6 +313,9 @@ def token_endpoint(form):
         refresh = form.get("refresh_token", "")
         client_id = form.get("client_id", "")
         with _db() as db:
+            # Refresh tokens are single-use and rotate on every successful grant.
+            # Serialize lookup+delete to prevent concurrent reuse.
+            db.execute("BEGIN IMMEDIATE")
             row = db.execute("SELECT * FROM refresh_tokens WHERE token_hash=?", (_hash(refresh),)).fetchone()
             if row:
                 db.execute("DELETE FROM refresh_tokens WHERE token_hash=?", (_hash(refresh),))
