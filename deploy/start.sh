@@ -15,6 +15,9 @@ export ATDEV_OAUTH_DB=/var/lib/atdev-videoai/oauth.sqlite3
 # Persistent data path; the Railway volume should be mounted at /var/lib/atdev-videoai.
 mkdir -p /var/lib/atdev-videoai/projects /var/lib/atdev-videoai/renders /var/lib/atdev-videoai/assets
 mkdir -p /app/projects /app/engine/renders /app/engine/assets
+ln -sfn /var/lib/atdev-videoai/projects /app/projects
+ln -sfn /var/lib/atdev-videoai/renders /app/engine/renders
+ln -sfn /var/lib/atdev-videoai/assets /app/engine/assets
 
 cat >/etc/nginx/conf.d/default.conf <<'NGINX'
 server {
