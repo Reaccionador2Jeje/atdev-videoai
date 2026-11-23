@@ -155,7 +155,7 @@ def main():
                 send({"jsonrpc": "2.0", "id": request_id, "result": {
                     "protocolVersion": message.get("params", {}).get("protocolVersion", "2024-11-05"),
                     "capabilities": {"tools": {}},
-                    "serverInfo": {"name": "atdev-videoai", "version": "0.2.0"}}})
+                    "serverInfo": {"name": "atdev-videoai", "version": "1.1.0"}}})
             elif method == "ping":
                 send({"jsonrpc": "2.0", "id": request_id, "result": {}})
             elif method == "tools/list":
