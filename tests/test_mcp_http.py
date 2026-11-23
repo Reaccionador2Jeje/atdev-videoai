@@ -49,6 +49,9 @@ class MCPHTTPProtocolTests(unittest.TestCase):
         self.assertIn("render_video_project", names)
         self.assertIn("list_video_projects", names)
         self.assertIn("get_video_download", names)
+        tools = payload["result"]["tools"]
+        project_tool = next(tool for tool in tools if tool["name"] == "create_video_project")
+        self.assertEqual(project_tool["_meta"]["securitySchemes"][0]["scopes"], ["videoai.write"])
 
     def test_notification_returns_accepted_without_json_body(self):
         request = Request(
