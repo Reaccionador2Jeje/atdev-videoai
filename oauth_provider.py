@@ -20,7 +20,7 @@ DB_PATH = Path(os.environ.get("ATDEV_OAUTH_DB", str(ROOT / "oauth.sqlite3")))
 BASE_URL = os.environ.get("ATDEV_PUBLIC_BASE_URL", "").rstrip("/")
 RESOURCE = BASE_URL + "/mcp" if BASE_URL else ""
 ISSUER = BASE_URL
-SCOPES = {"videoai.read", "videoai.write", "videoai.render"}
+SCOPES = {"videoai.read", "videoai.write", "videoai.render", "offline_access"}
 ACCESS_TTL = 3600
 REFRESH_TTL = 30 * 24 * 3600
 
