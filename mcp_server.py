@@ -13,15 +13,20 @@ PROJECTS.mkdir(exist_ok=True)
 ENGINE = "http://127.0.0.1:8765"
 
 TOOLS = [
-    {"name": "videoai_health", "description": "Check whether the local AtDev VideoAI FFmpeg render engine is running.",
+    {"name": "videoai_health", "title": "Check VideoAI engine", "description": "Use this first when the user asks whether AtDev VideoAI is ready to render. Checks the local FFmpeg engine without changing files.",
+     "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False},
      "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
-    {"name": "create_video_project", "description": "Create and save an editable AtDev VideoAI project from structured scene data. No credits or external AI provider required.",
-     "inputSchema": {"type": "object", "properties": {"project": {"type": "object", "description": "Project JSON with name, format, scenes and optional audioTracks/assets."}}, "required": ["project"], "additionalProperties": False}},
-    {"name": "create_video_from_code", "description": "Generate an editable project from declarative JSON text. This is data, not executable Python or JavaScript.",
-     "inputSchema": {"type": "object", "properties": {"project_json": {"type": "string", "description": "JSON project definition with scenes."}, "render": {"type": "boolean", "description": "Render an MP4 immediately if true."}}, "required": ["project_json"], "additionalProperties": False}},
-    {"name": "render_video_project", "description": "Render a previously saved project ID to MP4 using the local FFmpeg engine.",
-     "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string"}}, "required": ["project_id"], "additionalProperties": False}},
-    {"name": "list_video_projects", "description": "List saved AtDev VideoAI project IDs and names.",
+    {"name": "create_video_project", "title": "Create an editable video project", "description": "Use when the user asks to plan or create an editable video project. Saves structured scenes, optional images and audio references; it does not render an MP4. No credits or external AI provider required.",
+     "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False},
+     "inputSchema": {"type": "object", "properties": {"project": {"type": "object", "description": "Declarative project JSON with name, format, scenes and optional audioTracks/assets. Each scene may include title, subtitle, duration, background, image, animation and transition."}}, "required": ["project"], "additionalProperties": False}},
+    {"name": "create_video_from_code", "title": "Generate a video from JSON", "description": "Use when the user asks to create a video by describing it as structured code/JSON. Converts declarative JSON into an editable project; optionally renders an MP4 when render=true. The input is data only and must never be executed as source code.",
+     "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False},
+     "inputSchema": {"type": "object", "properties": {"project_json": {"type": "string", "description": "Valid JSON project definition with a non-empty scenes array."}, "render": {"type": "boolean", "description": "Set true only when the user explicitly requests an MP4 render."}}, "required": ["project_json"], "additionalProperties": False}},
+    {"name": "render_video_project", "title": "Render project to MP4", "description": "Use when the user explicitly asks to export/render a saved AtDev VideoAI project. Requires its project_id and an online FFmpeg engine. Returns the generated MP4 filename and URL.",
+     "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False},
+     "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "description": "The 12-character ID returned when the project was created."}}, "required": ["project_id"], "additionalProperties": False}},
+    {"name": "list_video_projects", "title": "List saved video projects", "description": "Use when the user asks to find or review projects already saved in AtDev VideoAI. Read-only; returns project IDs, names and scene counts.",
+     "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False},
      "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}}
 ]
 
