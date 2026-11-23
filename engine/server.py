@@ -154,7 +154,7 @@ def render(project):
             idx = len(audio_inputs) // 2 - 1
             start_ms = max(0, min(3600000, int(float(clip.get("start", 0)) * 1000)))
             volume = max(0.0, min(2.0, float(clip.get("volume", 1))))
-            audio_filters.append("[" + str(len(segments) + idx) + ":a]asetpts=PTS-STARTPTS,volume=" +
+            audio_filters.append("[" + str(idx + 1) + ":a]asetpts=PTS-STARTPTS,volume=" +
                 str(volume) + ",adelay=" + str(start_ms) + "|" + str(start_ms) + "[a" + str(idx) + "]")
         filename = "video-" + uuid.uuid4().hex[:12] + ".mp4"
         destination = OUT / filename
@@ -189,7 +189,7 @@ class API(BaseHTTPRequestHandler):
             return
         if path.startswith("/renders/"):
             name = Path(path).name
-            if not re.fullmatch(r"video-[a-f0-9]+\\.mp4", name):
+            if not re.fullmatch(r"video-[a-f0-9]+\.mp4", name):
                 self.send_error(404)
                 return
             file = OUT / name
