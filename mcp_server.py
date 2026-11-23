@@ -2,6 +2,12 @@
 """Minimal dependency-free MCP stdio bridge for AtDev VideoAI."""
 import json
 import sys
+import os
+import re
+import hmac
+import hashlib
+import time
+from urllib.parse import urlencode
 import urllib.request
 import urllib.error
 import uuid
@@ -14,21 +20,45 @@ ENGINE = "http://127.0.0.1:8765"
 
 TOOLS = [
     {"name": "videoai_health", "title": "Check VideoAI engine", "description": "Use this first when the user asks whether AtDev VideoAI is ready to render. Checks the local FFmpeg engine without changing files.",
+     "_meta": {"securitySchemes": [{"type": "noauth"}]},
      "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False},
      "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
     {"name": "create_video_project", "title": "Create an editable video project", "description": "Use when the user asks to plan or create an editable video project. Saves structured scenes, optional images and audio references; it does not render an MP4. No credits or external AI provider required.",
+     "_meta": {"securitySchemes": [{"type": "oauth2", "scopes": ["videoai.write"]}]},
      "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False},
      "inputSchema": {"type": "object", "properties": {"project": {"type": "object", "description": "Declarative project JSON with name, format, scenes and optional audioTracks/assets. Each scene may include title, subtitle, duration, background, image, animation and transition."}}, "required": ["project"], "additionalProperties": False}},
     {"name": "create_video_from_code", "title": "Generate a video from JSON", "description": "Use when the user asks to create a video by describing it as structured code/JSON. Converts declarative JSON into an editable project; optionally renders an MP4 when render=true. The input is data only and must never be executed as source code.",
+     "_meta": {"securitySchemes": [{"type": "oauth2", "scopes": ["videoai.write", "videoai.render"]}]},
      "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False},
      "inputSchema": {"type": "object", "properties": {"project_json": {"type": "string", "description": "Valid JSON project definition with a non-empty scenes array."}, "render": {"type": "boolean", "description": "Set true only when the user explicitly requests an MP4 render."}}, "required": ["project_json"], "additionalProperties": False}},
-    {"name": "render_video_project", "title": "Render project to MP4", "description": "Use when the user explicitly asks to export/render a saved AtDev VideoAI project. Requires its project_id and an online FFmpeg engine. Returns the generated MP4 filename and URL.",
+    {"name": "render_video_project", "title": "Render project to MP4", "description": "Use when the user explicitly asks to export/render a saved AtDev VideoAI project. Requires its project_id and an online FFmpeg engine. Returns the generated MP4 filename and a temporary download URL when configured.",
+     "_meta": {"securitySchemes": [{"type": "oauth2", "scopes": ["videoai.render"]}]},
      "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False},
      "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "description": "The 12-character ID returned when the project was created."}}, "required": ["project_id"], "additionalProperties": False}},
     {"name": "list_video_projects", "title": "List saved video projects", "description": "Use when the user asks to find or review projects already saved in AtDev VideoAI. Read-only; returns project IDs, names and scene counts.",
+     "_meta": {"securitySchemes": [{"type": "oauth2", "scopes": ["videoai.read"]}]},
      "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False},
      "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}}
 ]
+
+
+def signed_download_url(filename):
+    if not re.fullmatch(r"video-[a-f0-9]{12}\\.mp4", str(filename)):
+        raise ValueError("Invalid rendered video filename.")
+    path = ROOT / "engine" / "renders" / filename
+    if not path.is_file():
+        raise ValueError("Rendered video not found on this server.")
+    base = os.environ.get("ATDEV_PUBLIC_BASE_URL", "").rstrip("/")
+    secret = os.environ.get("ATDEV_DOWNLOAD_SECRET", "")
+    if not base.startswith("https://"):
+        raise RuntimeError("Set ATDEV_PUBLIC_BASE_URL to your public HTTPS origin.")
+    if len(secret) < 32:
+        raise RuntimeError("Set ATDEV_DOWNLOAD_SECRET to a random secret of at least 32 characters.")
+    expires = int(time.time()) + 900
+    message = filename + ":" + str(expires)
+    signature = hmac.new(secret.encode(), message.encode(), hashlib.sha256).hexdigest()
+    return base + "/download/" + filename + "?" + urlencode({"expires": expires, "sig": signature})
+
 
 def call_engine(project):
     body = json.dumps(project).encode()
@@ -36,7 +66,14 @@ def call_engine(project):
         headers={"Content-Type": "application/json"}, method="POST")
     try:
         with urllib.request.urlopen(request, timeout=600) as response:
-            return json.loads(response.read().decode())
+            result = json.loads(response.read().decode())
+            if result.get("filename"):
+                try:
+                    result["download_url"] = signed_download_url(result["filename"])
+                except (RuntimeError, ValueError) as error:
+                    result["download_url"] = None
+                    result["download_note"] = str(error)
+            return result
     except urllib.error.URLError as error:
         raise RuntimeError("Local render engine unavailable. Start it with: python engine/server.py. " + str(error))
 
@@ -82,6 +119,9 @@ def tool_call(name, args):
         if not path.is_file():
             raise ValueError("Project not found.")
         return call_engine(json.loads(path.read_text(encoding="utf-8")))
+    if name == "get_video_download":
+        filename = str(args.get("filename", ""))
+        return {"filename": filename, "download_url": signed_download_url(filename), "expires_in": 900}
     if name == "list_video_projects":
         items = []
         for path in sorted(PROJECTS.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
