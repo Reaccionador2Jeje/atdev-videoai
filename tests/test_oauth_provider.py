@@ -117,5 +117,56 @@ class OAuthProviderTests(unittest.TestCase):
             })
 
 
+
+    def _issue_test_tokens(self, scope="videoai.read"):
+        client = oauth.register_client({"redirect_uris": ["https://client.example.test/callback"]})
+        verifier = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN"
+        challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip("=")
+        request_id, _ = oauth.begin_authorization({
+            "client_id": client["client_id"], "redirect_uri": client["redirect_uris"][0],
+            "response_type": "code", "code_challenge": challenge,
+            "code_challenge_method": "S256", "scope": scope, "resource": oauth.RESOURCE
+        })
+        callback = oauth.complete_authorization({
+            "request_id": request_id, "username": "creator",
+            "password": "a-long-test-password", "approve": "yes"
+        })
+        code = parse_qs(urlparse(callback).query)["code"][0]
+        tokens = oauth.token_endpoint({
+            "grant_type": "authorization_code", "client_id": client["client_id"],
+            "redirect_uri": client["redirect_uris"][0], "code": code,
+            "code_verifier": verifier, "resource": oauth.RESOURCE
+        })
+        return client, tokens
+
+    def test_authorization_code_cannot_be_exchanged_twice(self):
+        client, tokens = self._issue_test_tokens()
+        with self.assertRaisesRegex(ValueError, "invalid_grant"):
+            oauth.token_endpoint({
+                "grant_type": "authorization_code", "client_id": client["client_id"],
+                "redirect_uri": "https://client.example.test/callback",
+                "code": "already-consumed", "code_verifier": "x" * 64
+            })
+
+    def test_refresh_token_cannot_be_reused(self):
+        client, tokens = self._issue_test_tokens()
+        request = {
+            "grant_type": "refresh_token", "client_id": client["client_id"],
+            "refresh_token": tokens["refresh_token"], "resource": oauth.RESOURCE
+        }
+        rotated = oauth.token_endpoint(request)
+        self.assertNotEqual(tokens["refresh_token"], rotated["refresh_token"])
+        with self.assertRaisesRegex(ValueError, "invalid_grant"):
+            oauth.token_endpoint(request)
+
+    def test_refresh_token_cannot_escalate_scope(self):
+        client, tokens = self._issue_test_tokens("videoai.read")
+        with self.assertRaisesRegex(ValueError, "invalid_scope"):
+            oauth.token_endpoint({
+                "grant_type": "refresh_token", "client_id": client["client_id"],
+                "refresh_token": tokens["refresh_token"],
+                "scope": "videoai.read videoai.render"
+            })
+
 if __name__ == "__main__":
     unittest.main()
