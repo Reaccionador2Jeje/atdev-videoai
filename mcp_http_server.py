@@ -96,9 +96,16 @@ class MCPHandler(BaseHTTPRequestHandler):
                 request_id, data = oauth.begin_authorization(query)
                 self.html_reply(200, oauth.authorization_page(request_id, data))
             except Exception as error:
-                self.html_reply(400, "<h1>Authorization unavailable</h1><p>" +
-                                str(error).replace("&", "&amp;").replace("<", "&lt;") +
-                                "</p>")
+                destination = oauth.authorization_error_redirect(query, error)
+                if destination:
+                    self.send_response(302)
+                    self.send_header("Location", destination)
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                else:
+                    self.html_reply(400, "<h1>Authorization unavailable</h1><p>" +
+                                    str(error).replace("&", "&amp;").replace("<", "&lt;") +
+                                    "</p>")
             return
         self.reply(404, {"error": "Not found"})
 
@@ -140,9 +147,14 @@ class MCPHandler(BaseHTTPRequestHandler):
                 self.send_header("Cache-Control", "no-store")
                 self.end_headers()
             except Exception as error:
-                self.html_reply(403, "<h1>Authorization not completed</h1><p>" +
-                                str(error).replace("&", "&amp;").replace("<", "&lt;") +
-                                "</p><p>Return to ChatGPT and start the connection again.</p>")
+                request_id = form.get("request_id", "")
+                pending = oauth.pending_authorization(request_id)
+                if pending:
+                    self.html_reply(403, oauth.authorization_page(request_id, pending, str(error)))
+                else:
+                    self.html_reply(403, "<h1>Authorization not completed</h1><p>" +
+                                    str(error).replace("&", "&amp;").replace("<", "&lt;") +
+                                    "</p><p>Return to ChatGPT and start the connection again.</p>")
             return
 
         if parsed.path != "/mcp":
@@ -219,7 +231,9 @@ class MCPHandler(BaseHTTPRequestHandler):
                     if not all(oauth.verify_access_token(bearer, scope) for scope in scopes):
                         metadata_url = (oauth.RESOURCE and
                                         oauth.ISSUER + "/.well-known/oauth-protected-resource")
-                        challenge = ('Bearer resource_metadata="' + metadata_url +
+                        required_scope = " ".join(scopes)
+                    challenge = ('Bearer resource_metadata="' + metadata_url +
+                                     '", scope="' + required_scope +
                                      '", error="invalid_token", error_description="Connect your AtDev VideoAI account to authorize this action"')
                         payload = {
                             "content": [{"type": "text", "text": "Authentication required. Connect your AtDev VideoAI account."}],
