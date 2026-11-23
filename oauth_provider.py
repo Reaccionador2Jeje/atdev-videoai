@@ -313,21 +313,20 @@ def token_endpoint(form):
         refresh = form.get("refresh_token", "")
         client_id = form.get("client_id", "")
         with _db() as db:
-            # Refresh tokens are single-use and rotate on every successful grant.
-            # Serialize lookup+delete to prevent concurrent reuse.
+            # Validate before consuming, then atomically claim the refresh token.
+            # BEGIN IMMEDIATE prevents concurrent requests from both rotating it.
             db.execute("BEGIN IMMEDIATE")
             row = db.execute("SELECT * FROM refresh_tokens WHERE token_hash=?", (_hash(refresh),)).fetchone()
-            if row:
-                db.execute("DELETE FROM refresh_tokens WHERE token_hash=?", (_hash(refresh),))
-        if not row or row["expires_at"] < int(time.time()) or row["client_id"] != client_id:
-            raise ValueError("invalid_grant")
-        if form.get("resource") and form["resource"] != row["resource"]:
-            raise ValueError("invalid_grant")
-        scope, resource = row["scope"], row["resource"]
-        requested_scope = set(form.get("scope", scope).split())
-        if requested_scope - set(scope.split()):
-            raise ValueError("invalid_scope")
-        scope = " ".join(sorted(requested_scope))
+            if not row or row["expires_at"] < int(time.time()) or row["client_id"] != client_id:
+                raise ValueError("invalid_grant")
+            if form.get("resource") and form["resource"] != row["resource"]:
+                raise ValueError("invalid_grant")
+            requested_scope = set(form.get("scope", row["scope"]).split())
+            if not requested_scope or requested_scope - set(row["scope"].split()):
+                raise ValueError("invalid_scope")
+            scope = " ".join(sorted(requested_scope))
+            resource = row["resource"]
+            db.execute("DELETE FROM refresh_tokens WHERE token_hash=?", (_hash(refresh),))
     else:
         raise ValueError("unsupported_grant_type")
 
