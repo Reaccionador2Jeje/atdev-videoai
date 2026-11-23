@@ -233,7 +233,7 @@ class MCPHandler(BaseHTTPRequestHandler):
                         metadata_url = (oauth.RESOURCE and
                                         oauth.ISSUER + "/.well-known/oauth-protected-resource")
                         required_scope = " ".join(scopes)
-                    challenge = ('Bearer resource_metadata="' + metadata_url +
+                        challenge = ('Bearer resource_metadata="' + metadata_url +
                                      '", scope="' + required_scope +
                                      '", error="invalid_token", error_description="Connect your AtDev VideoAI account to authorize this action"')
                         payload = {
