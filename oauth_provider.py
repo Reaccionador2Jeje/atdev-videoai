@@ -177,7 +177,7 @@ def begin_authorization(query):
     if query.get("response_type") != "code":
         raise ValueError("Only response_type=code is supported.")
     challenge = query.get("code_challenge", "")
-    if query.get("code_challenge_method") != "S256" or len(challenge) < 43:
+    if query.get("code_challenge_method") != "S256" or not __import__("re").fullmatch(r"[A-Za-z0-9_-]{43}", challenge):
         raise ValueError("PKCE with S256 is required.")
     requested = set(query.get("scope", "videoai.read videoai.write videoai.render").split())
     if not requested or requested - SCOPES:
@@ -291,7 +291,7 @@ def token_endpoint(form):
             raise ValueError("invalid_grant")
         if form.get("resource") and form["resource"] != row["resource"]:
             raise ValueError("invalid_grant")
-        if not (43 <= len(verifier) <= 128):
+        if not __import__("re").fullmatch(r"[A-Za-z0-9._~-]{43,128}", verifier):
             raise ValueError("invalid_grant")
         derived = __import__("base64").urlsafe_b64encode(
             hashlib.sha256(verifier.encode()).digest()
