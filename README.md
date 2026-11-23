@@ -10,7 +10,8 @@ AtDev VideoAI is both an independent web studio and an MCP-enabled video creatio
 3. **Motion and transitions:** slow zoom-in, zoom-out, fade-in and per-scene cut/crossfade.
 4. **Multitrack timeline:** visual video-scene lane plus independent audio lane and editable clip controls.
 5. **Code video generation:** create complete editable projects from declarative JSON in the editor or through MCP. No arbitrary code is executed.
-6. **MCP integration:** stdio and authenticated HTTP MCP servers expose project creation, code generation, project listing, engine health and MP4 rendering.
+6. **ChatGPT MCP integration:** stateless Streamable HTTP MCP with OAuth 2.1 authorization-code + PKCE, dynamic client registration, per-tool scopes and refresh tokens.
+7. **Signed MP4 delivery:** temporary HMAC-signed HTTPS download links for rendered videos.
 
 The renderer exports H.264/AAC MP4 using FFmpeg. No paid API or cloud credit system is required.
 
@@ -47,7 +48,7 @@ Local endpoint: http://127.0.0.1:8766/mcp
 
 For ChatGPT-specific setup, account availability, protocol details and security notes, see [docs/CHATGPT.md](docs/CHATGPT.md). The HTTP endpoint implements stateless Streamable HTTP MCP over JSON. ChatGPT custom-app availability depends on the plan and workspace; this repository cannot enable account features.
 
-See [engine/README.md](engine/README.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+See [ChatGPT integration guide](docs/CHATGPT.md), [engine/README.md](engine/README.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Principles
 - No credits, credit packs, or artificial generation tokens.
