@@ -48,6 +48,7 @@ class MCPHTTPProtocolTests(unittest.TestCase):
         self.assertIn("create_video_project", names)
         self.assertIn("render_video_project", names)
         self.assertIn("list_video_projects", names)
+        self.assertIn("get_video_download", names)
 
     def test_notification_returns_accepted_without_json_body(self):
         request = Request(
