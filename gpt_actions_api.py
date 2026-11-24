@@ -75,7 +75,7 @@ def handle_request(method, path, headers, body=b""):
         except Exception as error:
             return _response(422, {"error": str(error)})
 
-    match = re.fullmatch(r"/actions/v1/renders/(video-[a-f0-9]{12}\\.mp4)/download", path)
+    match = re.fullmatch(r"/actions/v1/renders/(video-[a-f0-9]{12}\.mp4)/download", path)
     if method == "GET" and match:
         try:
             return _response(200, tool_call("get_video_download", {"filename": match.group(1)}))
