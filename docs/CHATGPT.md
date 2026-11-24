@@ -15,20 +15,38 @@ The renderer is local-first and does not require a paid AI provider or credit ba
 
 ## ChatGPT connection
 
-The MCP endpoint is:
+The deployed MCP endpoint is:
 
-    https://YOUR-HOST/mcp
+    https://atdev-videoai-production.up.railway.app/mcp
 
-ChatGPT custom MCP apps support remote MCP servers over streaming HTTP and OAuth. In a workspace that permits custom MCP connections:
+AtDev VideoAI is an MCP server, not a separately installable ZIP/plugin package. ChatGPT connects to the remote HTTPS endpoint and discovers the six tools from the server.
 
-1. Open ChatGPT on the web and go to **Plugins / Apps**.
+### Current ChatGPT availability
+
+Custom MCP connections with full tool support (including create/render actions) are currently available in ChatGPT Business and Enterprise/Edu workspaces on the web, subject to workspace permissions. Pro can connect custom MCP servers with read/fetch permissions only. Free accounts currently do not have custom MCP server connections. Custom MCP connections are not supported in the ChatGPT mobile app.
+
+This means the AtDev server can be deployed and ready while a Free ChatGPT account still cannot add it. Do not change the server's security settings or remove OAuth to try to work around account eligibility.
+
+Check OpenAI's current requirements before connecting because plan and workspace availability can change:
+- [Connect custom MCP servers in ChatGPT](https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt)
+- [Build with the Apps SDK](https://help.openai.com/en/articles/12515353-building-with-the-apps-sdk)
+
+### Connect when the account/workspace supports it
+
+From ChatGPT on the web, using an account or workspace authorized to create custom MCP connections:
+
+1. Open **Plugins / Apps** (the exact menu label may vary).
 2. Choose **Add custom MCP server**.
-3. Enter a name such as **AtDev VideoAI** and the HTTPS MCP endpoint above.
-4. Choose **OAuth** authentication.
-5. Complete the AtDev VideoAI sign-in and approve the requested scopes.
-6. Review the discovered tools and their permissions before enabling the connection.
+3. Name it **AtDev VideoAI**.
+4. Set the connection URL to `https://atdev-videoai-production.up.railway.app/mcp`.
+5. Select OAuth authentication.
+6. Complete the AtDev VideoAI authorization page and review the requested permissions.
+7. Scan/discover the tools and review the read/write actions before enabling the app.
+8. Start a new conversation and test the health and project tools.
 
-Custom MCP app availability and workspace controls are determined by ChatGPT. This repository cannot enable account features or create a connection inside a user's ChatGPT account.
+The server currently exposes six tools: `videoai_health`, `create_video_project`, `create_video_from_code`, `render_video_project`, `list_video_projects` and `get_video_download`.
+
+ChatGPT may require confirmation for write or render actions. The repository cannot add the connection to a user's ChatGPT account, grant workspace permissions, or change plan eligibility.
 
 ## OAuth 2.1 provider
 
