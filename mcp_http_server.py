@@ -7,6 +7,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from mcp_server import TOOLS, tool_call
+from mcp_apps_ui import UI_RESOURCE_URI, UI_HTML, UI_RESOURCE_META
+
 import oauth_provider as oauth
 
 HOST = os.environ.get("ATDEV_MCP_HOST", "127.0.0.1")
@@ -228,6 +230,32 @@ class MCPHandler(BaseHTTPRequestHandler):
             return
         if method == "ping":
             self.reply(200, {"jsonrpc": "2.0", "id": request_id, "result": {}})
+            return
+        if method == "resources/list":
+            self.reply(200, {"jsonrpc": "2.0", "id": request_id, "result": {
+                "resources": [{
+                    "uri": UI_RESOURCE_URI,
+                    "name": "AtDev VideoAI workspace",
+                    "title": "AtDev VideoAI",
+                    "description": "Interactive video project workspace for ChatGPT.",
+                    "mimeType": "text/html;profile=mcp-app",
+                    "_meta": UI_RESOURCE_META,
+                }]
+            }})
+            return
+        if method == "resources/read":
+            uri = params.get("uri")
+            if uri != UI_RESOURCE_URI:
+                self._json_error(request_id, -32602, "Unknown resource URI")
+                return
+            self.reply(200, {"jsonrpc": "2.0", "id": request_id, "result": {
+                "contents": [{
+                    "uri": UI_RESOURCE_URI,
+                    "mimeType": "text/html;profile=mcp-app",
+                    "text": UI_HTML,
+                    "_meta": UI_RESOURCE_META,
+                }]
+            }})
             return
         if method == "tools/list":
             self.reply(200, {"jsonrpc": "2.0", "id": request_id,
