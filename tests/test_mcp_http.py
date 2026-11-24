@@ -1,6 +1,8 @@
 import json
 import threading
 import unittest
+from unittest.mock import patch
+import os
 from http.server import ThreadingHTTPServer
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
@@ -99,6 +101,36 @@ class MCPHTTPProtocolTests(unittest.TestCase):
         tool = next(item for item in payload["result"]["tools"] if item["name"] == "create_video_from_code")
         self.assertEqual(tool["_meta"]["ui"]["resourceUri"], "ui://atdev-videoai/workspace/v1.html")
         self.assertEqual(tool["_meta"]["openai/outputTemplate"], "ui://atdev-videoai/workspace/v1.html")
+
+
+    def test_gpt_actions_openapi_is_publicly_discoverable(self):
+        request = Request(self.url.replace("/mcp", "/actions/openapi.json"), method="GET")
+        with urlopen(request, timeout=3) as response:
+            schema = json.loads(response.read())
+            self.assertEqual(response.status, 200)
+            self.assertEqual(schema["openapi"], "3.1.0")
+            self.assertIn("/actions/v1/projects", schema["paths"])
+
+    def test_gpt_actions_requires_server_api_key(self):
+        request = Request(self.url.replace("/mcp", "/actions/v1/health"), method="GET")
+        with patch.dict(os.environ, {"ATDEV_GPT_ACTIONS_API_KEY": "a" * 40}):
+            with self.assertRaises(HTTPError) as error:
+                urlopen(request, timeout=3)
+        self.assertEqual(error.exception.code, 401)
+
+    def test_gpt_actions_health_uses_authenticated_api(self):
+        request = Request(
+            self.url.replace("/mcp", "/actions/v1/health"),
+            headers={"X-AtDev-API-Key": "test-secret-" + "x" * 40},
+            method="GET",
+        )
+        with patch.dict(os.environ, {"ATDEV_GPT_ACTIONS_API_KEY": "test-secret-" + "x" * 40}):
+            with patch("gpt_actions_api.tool_call", return_value={"ok": True, "ffmpeg": True}) as call:
+                with urlopen(request, timeout=3) as response:
+                    payload = json.loads(response.read())
+                    self.assertEqual(response.status, 200)
+                    self.assertTrue(payload["ok"])
+                    call.assert_called_once_with("videoai_health", {})
 
 
 if __name__ == "__main__":
