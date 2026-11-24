@@ -47,7 +47,7 @@ For an HTTP MCP endpoint, start:
 
 Local endpoint: http://127.0.0.1:8766/mcp
 
-For ChatGPT-specific setup, account availability, protocol details and security notes, see [docs/CHATGPT.md](docs/CHATGPT.md). The HTTP endpoint implements stateless Streamable HTTP MCP over JSON. ChatGPT custom-app availability depends on the plan and workspace; this repository cannot enable account features.
+For a custom GPT using GPT Actions, see [GPT Actions setup](docs/GPT_ACTIONS_SETUP.md) and the [OpenAPI schema](docs/openapi/gpt-actions.json). The existing MCP integration guide remains at [docs/CHATGPT.md](docs/CHATGPT.md). The HTTP endpoint implements stateless Streamable HTTP MCP over JSON. ChatGPT custom-app availability depends on the plan and workspace; this repository cannot enable account features.
 
 See [ChatGPT integration guide](docs/CHATGPT.md), [engine/README.md](engine/README.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
