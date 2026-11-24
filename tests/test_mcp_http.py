@@ -79,5 +79,27 @@ class MCPHTTPProtocolTests(unittest.TestCase):
         self.assertEqual(error.exception.code, 415)
 
 
+    def test_resources_list_exposes_workspace_ui(self):
+        _, payload, _ = self.post({"jsonrpc": "2.0", "id": 3, "method": "resources/list"})
+        resources = payload["result"]["resources"]
+        self.assertTrue(any(item["uri"] == "ui://atdev-videoai/workspace/v1.html" for item in resources))
+
+    def test_resources_read_returns_mcp_app_html(self):
+        _, payload, _ = self.post({
+            "jsonrpc": "2.0", "id": 4, "method": "resources/read",
+            "params": {"uri": "ui://atdev-videoai/workspace/v1.html"},
+        })
+        item = payload["result"]["contents"][0]
+        self.assertEqual(item["mimeType"], "text/html;profile=mcp-app")
+        self.assertIn("AtDev VideoAI", item["text"])
+        self.assertIn("Latest tool result", item["text"])
+
+    def test_video_from_code_tool_references_workspace_ui(self):
+        _, payload, _ = self.post({"jsonrpc": "2.0", "id": 5, "method": "tools/list"})
+        tool = next(item for item in payload["result"]["tools"] if item["name"] == "create_video_from_code")
+        self.assertEqual(tool["_meta"]["ui"]["resourceUri"], "ui://atdev-videoai/workspace/v1.html")
+        self.assertEqual(tool["_meta"]["openai/outputTemplate"], "ui://atdev-videoai/workspace/v1.html")
+
+
 if __name__ == "__main__":
     unittest.main()
