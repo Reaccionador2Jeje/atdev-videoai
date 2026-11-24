@@ -8,6 +8,7 @@ from urllib.parse import parse_qs, urlparse
 
 from mcp_server import TOOLS, tool_call
 from mcp_apps_ui import UI_RESOURCE_URI, UI_HTML, UI_RESOURCE_META
+import gpt_actions_api
 
 import oauth_provider as oauth
 
@@ -90,6 +91,10 @@ class MCPHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
+        if parsed.path == "/actions/openapi.json" or parsed.path.startswith("/actions/v1/"):
+            status, payload, headers = gpt_actions_api.handle_request("GET", parsed.path, self.headers, b"")
+            self.reply(status, payload, headers)
+            return
         if parsed.path == "/mcp":
             self.reply(405, {"error": "GET is not supported on the stateless MCP endpoint"},
                        {"Allow": "POST, OPTIONS"})
@@ -122,6 +127,15 @@ class MCPHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
+        if parsed.path.startswith("/actions/v1/"):
+            try:
+                raw = self.read_body()
+            except ValueError:
+                self.reply(400, {"error": "Request body must be between 1 byte and 2 MB."})
+                return
+            status, payload, headers = gpt_actions_api.handle_request("POST", parsed.path, self.headers, raw)
+            self.reply(status, payload, headers)
+            return
         if parsed.path == "/oauth/register":
             try:
                 if self.headers.get("Content-Type", "").split(";", 1)[0].strip() != "application/json":
